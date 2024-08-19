@@ -1,0 +1,39 @@
+#to allow only linux
+#pass ip [0.0.0.0/0] any -> [0.0.0.0/0] any (ttl:128; msg:"Allow Windows TTL 128"; sid:1000001;)
+#alert ip [0.0.0.0/0] any -> [0.0.0.0/0] any (msg:"Allow Windows TTL 64"; sid:1000001;)
+reject icmp any any -> any any (ttl:128; msg:"block the windows"; sid:1000002;)
+
+# SYN Flood Attack
+#alert tcp [0.0.0.0] any -> [192.168.56.116] 80 (msg:"SYN Flood Attack Detected"; flags:S; threshold:type:both, track by_src, count 100, seconds 10; sid:1000003;)
+reject tcp any any -> any any (msg:"DOS attack- SYN Flood rejected"; flags:S; sid:1000067;)
+
+#UDP Flood Attack
+#alert udp [0.0.0.0] any -> [192.168.56.116] any (msg:"UDP Flood Attack Detected"; threshold:type:both, track by_src, count 100, seconds 10; sid:1000004;)
+
+#ICMP Flood Attack
+alert tcp any any -> any 80 (msg:"SQL Injection Attempt"; flow:to_server,established; content:"select"; nocase; content:"from"; nocase; pcre:"/select.+from/i"; classtype:web-application-at>
+alert icmp any any -> any any (msg:"ICMP Ping Sweep"; icode:0; itype:8; sid:1000005;)
+
+#alert icmp [0.0.0.0] any -> [192.168.56.116] any (msg:"ICMP Flood Attack Detected"; threshold:type:both, track by_src, count 100, seconds 10; sid:1000005;)
+
+#HTTP Flood Attack
+#alert tcp [0.0.0.0] any -> [192.168.56.116] 80 (msg:"HTTP Flood Attack Detected"; flow:to_server,established; content:"GET"; threshold:type:both, track by_src, count 100, seconds 10;sid:1>
+alert tcp $EXTERNAL_NET $HTTP_PORTS -> $HOME_NET any (msg:"SQL Injection Attempt"; flow:to_server,established; content:"union select"; http_uri; nocase; sid:1000006;)
+
+#TCP ACK Flood Attack
+alert tcp [0.0.0.0] any -> [192.168.56.116] any (msg:"TCP ACK Flood Attack Detected"; flags:A;sid:1000007;)
+
+# Rule to detect HTTP traffic to a known malicious domain:
+alert tcp any any -> any any (msg:"Malicious HTTP traffic to known malicious domain"; flow:to_server,established; content:"Host: maliciousdomain.com"; http_header; sid:10001; rev:1;)
+
+# Rule to detect brute force attacks:
+alert tcp any any -> any 80 (msg:" Brute Force Attack";flow:to_server,established;flags: PA; detection_filter: track by_dst,count 3, seconds 5; classtype:attempted-dos; sid:10002; rev:1;)
+reject tcp any any -> any 22 (msg:"Brute Force SSH Login Attempt"; flow:to_server,established; detection_filter:track by_src, count 5, seconds 60; classtype:attempted-admin; sid:1000019; r>
+# Rule to detect SQL injection attacks:
+alert tcp any any -> any any (msg:"Possible SQL Injection Attack"; flow:to_server,established; content:"' or 1=1--"; sid:10003; rev:1;)
+reject tcp any any -> any 80 (msg:"SQL Injection Attempt"; flow:to_server,established; content:"select"; nocase; content:"from"; nocase; pcre:"/select.+from/i"; classtype:web-application-a>
+
+
+#rule for dictionary attack
+alert tcp any any -> $HOME_NET 21 (msg:"FTP Dictionary Attack"; flow:to_server,established; content:"USER"; nocase; detection_filter:track by_src, count 5, seconds 60; classtype:attempted->
+
